@@ -3,20 +3,20 @@ name: OFP Decrypter by Area69Labs
 on:
   workflow_dispatch:
     inputs:
-      ofp_link:
+      ofp_link: https://rms01.realme.net/SW/realme%20service/realme%208i/21690/RMX3151export_11_A.41_2022031623510173.zip
         description: 'OFP Firmaware Link'
         required: true
-      filename:
+      filename: fw8i
         description: 'The filename You want in output (make unique)'
         required: true
-      devicetype:
+      devicetype: MTK
         description: 'Specify Your Device type. { For Qualcomm (QC) FOR MEDIATEK (MTK) }'
         required: true
-      simage:
+      simage: YES
         description: 'Do you want to merege super images, if yes then type <YES>'
         required: false
         default: 'NO'
-      bigfile:
+      bigfile: YES
         description: 'Set to YES if your ofp file is more than 8GB. Setting to yes will take more time.'
         required: false
         default: 'NO'        

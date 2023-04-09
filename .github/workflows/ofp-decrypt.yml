@@ -3,7 +3,7 @@ name: OFP Decrypter by Area69Labs
 on:
   workflow_dispatch:
     inputs:
-      ofp_link: https://rms01.realme.net/SW/realme%20service/realme%208i/21690/RMX3151export_11_A.41_2022031623510173.zip
+      ofp_link: https://rms01.realme.net/SW/realme service/realme 8i/21692/RMX3151GDPR_11_A.44_2022051000110000.7z
         description: 'OFP Firmaware Link'
         required: true
       filename: fw8i

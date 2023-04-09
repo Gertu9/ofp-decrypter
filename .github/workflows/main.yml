@@ -1,0 +1,121 @@
+name: OFP Decrypter by Area69Labs
+
+on:
+  workflow_dispatch:
+    inputs:
+      ofp_link: https://rms01.realme.net/SW/realme service/realme 8i/21692/RMX3151GDPR_11_A.44_2022051000110000.7z
+        description: 'OFP Firmaware Link'
+        required: true
+      filename: fw8i
+        description: 'The filename You want in output (make unique)'
+        required: true
+      devicetype: MTK
+        description: 'Specify Your Device type. { For Qualcomm (QC) FOR MEDIATEK (MTK) }'
+        required: true
+      simage: YES
+        description: 'Do you want to merege super images, if yes then type <YES>'
+        required: false
+        default: 'NO'
+      bigfile: YES
+        description: 'Set to YES if your ofp file is more than 8GB. Setting to yes will take more time.'
+        required: false
+        default: 'NO'        
+
+env:
+  OFP_LINK: ${{ github.event.inputs.ofp_link }}
+  FILENAME: ${{ github.event.inputs.filename }}
+  DTYPE: ${{ github.event.inputs.devicetype }}
+  SIMG: ${{ github.event.inputs.simage }}
+  BFILE: ${{ github.event.inputs.bigfile }}
+  
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+
+      - name: CleanUp Enviroment
+        if: ${{ github.event.inputs.bigfile }} == 'YES'
+        uses: rokibhasansagar/slimhub_actions@main
+
+      - name: Download OFP Firmware
+        run: |
+          aria2c -c -s16 -x16 "$OFP_LINK" 2>/dev/null || wget -q --show-progress "$OFP_LINK"
+          OFPFILE=${OFP_LINK##*/}
+          echo "OFP_FILE=${OFPFILE}" >> ${GITHUB_ENV}
+          OFPNAME=${OFPFILE%.*}
+          echo "OFP_NAME=${OFPNAME}" >> ${GITHUB_ENV}
+      - name: Prepare Decrypter and Decrypt OFP
+        shell: bash
+        run: |
+          sudo apt-fast update -qqy
+          sudo apt-fast install -qqy openssl rsync sshpass
+          sudo pip3 install --upgrade pip wheel setuptools
+          sudo pip3 install --upgrade pycryptodome
+          sudo apt install simg2img
+          git clone https://github.com/bkerler/oppo_decrypt.git --depth=1
+          dtype=$DTYPE
+          if [ $dtype == QC ]
+          then
+              printf "Trying to Decrypt QC OFP...\n"
+              python3 ./oppo_decrypt/ofp_mtk_decrypt.py "$OFP_FILE" out 2>/dev/null
+          elif [ $dtype == MTK ]
+          then
+              printf "Trying to Decrypt MTK OFP...\n"
+              python3 ./oppo_decrypt/ofp_mtk_decrypt.py "$OFP_FILE" out 2>/dev/null
+          else
+              printf "Specify your Device Type...\n"
+              printf "Cancelling Build\n"
+          fi
+      - name: Combine super images
+        shell: bash
+        run: |
+          simg=$SIMG
+          if [ $simg == YES ]
+          then
+              echo "Merging images"
+              mkdir super
+              cd out
+              sed '2!d' super*.csv >> tmp.txt && sed -i "s/,/ /" tmp* && sed -i "s/,/ /" tmp* && sed -i "s/,/ /" tmp* && sed -i "s/,/ /" tmp* && egrep -o [a-zA-Z0-9.-]*super[a-zA-Z0-9.-]* tmp* >> supermap.sh && sed  -i "1s/^/first=/" supermap.sh && sed  -i "2s/^/second=/" supermap.sh && mkdir -p temp/retard && mkdir -p ../super && sed  -i "3s/^/third=/" supermap.sh && echo "cp \$first \$second \$third temp/retard/" >> supermap.sh && bash supermap.sh && cd temp/retard && sudo apt install simg2img && sudo apt-get install libz-dev && simg2img *super*.img super.img && mv ../../*super*.img ../../../super && mv super.img ../.. && rm -rf temp/retard
+              cd ..
+            
+          elif [ $simg == NO ]
+          then
+              echo "Not merging images"
+          fi
+      - name: Compress Decrypted Zip
+        shell: bash
+        run: |
+          zip -r9 Decrypted_"${FILENAME}".zip out/
+          simg=$SIMG
+          if [ $simg == YES ]
+          then
+              zip -r superimages.zip super/
+              
+          elif [ $simg == NO ]
+          then
+              echo "Not zipping superimages"
+          fi         
+    
+      - name: Upload Decrypted Zip
+        shell: bash
+        run: |
+          wget https://sauraj.rommirrorer.workers.dev/0:/rclonesetup.sh
+          bash rclonesetup.sh
+          rclone -P copy Decrypted_"${FILENAME}".zip rom:/decrypted_ofp/"${FILENAME}"_decrypt
+          simg=$SIMG
+          if [ $simg == YES ]
+          then
+              rclone -P copy superimages.zip rom:/decrypted_ofp/"${FILENAME}"_decrypt
+              
+          elif [ $simg == NO ]
+          then
+              echo "Not Uploading superimages"
+          fi         
+          
+      - name: DOWNLOAD LINK
+        run: |
+          echo -e "zip LINK: https://sauraj.rommirrorer.workers.dev/0:/decrypted_ofp/${FILENAME}_decrypt"
+          echo "Edited By Sauraj"
